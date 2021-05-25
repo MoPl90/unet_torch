@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torchvision import transforms, datasets
-from oasis import build_oasis
-import torchvision.transforms as transforms
+from oasis import build_oasis, build_mprage
+import torchvision.transforms
 import argparse
 import numpy as np
 from train import train
@@ -18,9 +18,10 @@ def parse_args():
 
     #data parameters
     parser.add_argument('-i', '--image_size', help='(square) dimension of 2D/3D input image', type=int)
-    parser.add_argument('-d', '--dim', help='iamge dimension 2/3', type=int)
+    parser.add_argument('-d', '--dim', help='image dimension 2/3', type=int)
     parser.add_argument('-ch', '--channels', help='image channels', type=int)
     parser.add_argument('-cl', '--classes', help='number of class labels', type=int)
+    parser.add_argument('-da', '--data', help='Dataset used for training', type=str)
 
     #model parameters
     parser.add_argument('-de', '--depth', help='model depth', type=int, default=4)
@@ -55,28 +56,35 @@ def main(args):
         pre_train_mean = np.mean(pre_train_mean)
         pre_train_std = np.mean(pre_train_std)
 
+    if 'oasis' in args.data.lower():
 
-    transform_train =  transforms.Compose([
-                                            transforms.ToPILImage(),
-                                            transforms.Resize(256),
-                                            transforms.RandomCrop(256, padding=16),
-                                            transforms.RandomAffine((-15,15), shear=(-5,5)),
-                                            transforms.RandomHorizontalFlip(),
-                                            transforms.ToTensor(),
-                                            # transforms.Normalize(pre_train_mean, pre_train_std)
-                                        ])
+        transform_train =  torchvision.transforms.Compose([
+                                                            torchvision.transforms.ToPILImage(),
+                                                            torchvision.transforms.Resize(args.image_size),
+                                                            torchvision.transforms.RandomCrop(args.image_size, padding=16),
+                                                            torchvision.transforms.RandomAffine((-15,15), shear=(-5,5)),
+                                                            torchvision.transforms.RandomHorizontalFlip(),
+                                                            torchvision.transforms.ToTensor(),
+                                                        ])
 
-    transform_val = transforms.Compose([
-                                        transforms.ToPILImage(),
-                                        transforms.Resize(256),
-                                        transforms.ToTensor(),
-                                        # transforms.Normalize(pre_train_mean, pre_train_std)
-                                    ])
-    train_set    = build_oasis(root='/scratch/backUps/jzopes/data/oasis_project/Transformer/', train=True, transform=transform_train)
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
-    val_set      = build_oasis(root='/scratch/backUps/jzopes/data/oasis_project/Transformer/', train=False, transform=transform_val)
-    val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
-    
+        transform_val = torchvision.transforms.Compose([
+                                                        torchvision.transforms.ToPILImage(),
+                                                        torchvision.transforms.Resize(args.image_size),
+                                                        torchvision.transforms.ToTensor(),
+                                                    ])
+
+        train_set    = build_oasis(root='/scratch/backUps/jzopes/data/oasis_project/Transformer/', train=True, transform=transform_train)
+        train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
+        val_set      = build_oasis(root='/scratch/backUps/jzopes/data/oasis_project/Transformer/', train=False, transform=transform_val)
+        val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
+    else:
+        
+        train_set    = build_mprage(root='/scratch/mplatscher/imaging_data/', train=True, train_size=0.8, transform=None)
+        train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
+        val_set      = build_mprage(root='/scratch/mplatscher/imaging_data/', train=False, train_size=0.8, transform=None)
+        val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
+        
+
     def seed_everything(seed):
         random.seed(seed)
         os.environ['PYTHONHASHSEED'] = str(seed)

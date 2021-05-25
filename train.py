@@ -11,12 +11,12 @@ def train(model, train_loader, val_loader, device, criterion, optimizer, schedul
         epoch_dice     = 0
 
         for data, label in tqdm(train_loader):
-            data = torch.tensor(data.data.to(device), dtype=torch.float)
-            label = torch.tensor(label.data.to(device), dtype=torch.int64)
+            data = torch.as_tensor(data, dtype=torch.float).to(device)
+            label = torch.as_tensor(label, dtype=torch.int64).to(device)
 
             output = model(data)
             if len(label.shape) > 2:
-                criterion.weight = torch.tensor([0.1, 0.9]).to(device)
+                # criterion.weight = torch.tensor([0.1, 0.9]).to(device)
                 DSC = dice(output, label)
                 loss = criterion(output, label.squeeze(1)) + 1 - torch.sum(DSC) / len(DSC) 
             else:
@@ -39,8 +39,8 @@ def train(model, train_loader, val_loader, device, criterion, optimizer, schedul
             epoch_val_loss     = 0
             epoch_val_dice     = 0
             for data, label in val_loader:
-                data = torch.tensor(data.data.to(device), dtype=torch.float)
-                label = torch.tensor(label.data.to(device), dtype=torch.int64)
+                data = torch.tensor(data.to(device), dtype=torch.float)
+                label = torch.tensor(label.to(device), dtype=torch.int64)
 
                 val_output = model(data)
                 if len(label.shape) > 2:

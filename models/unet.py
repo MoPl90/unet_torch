@@ -18,12 +18,10 @@ class UNet(nn.Module):
 
         super().__init__()
         # construct unet structure
-        unet_block = UnetSkipConnectionBlock(filters * 8, filters * 8, input_nc=None, submodule=None, norm=norm, dim=dim, innermost=True)  # add the innermost layer
-        factor = 4
+        unet_block = UnetSkipConnectionBlock(filters, filters, input_nc=None, submodule=None, norm=norm, dim=dim, innermost=True)  # add the innermost layer
         for i in range(depth-1):
-            if factor > 0:
-                unet_block = UnetSkipConnectionBlock(filters * (factor), filters * (factor * 2), input_nc=None, submodule=unet_block, norm=norm, dim=dim)
-            factor = factor // 2
+            filters = filters // 2
+            unet_block = UnetSkipConnectionBlock(filters, filters * 2, input_nc=None, submodule=unet_block, norm=norm, dim=dim)
 
         # unet_block = UnetSkipConnectionBlock(filters * 2, filters * 4, input_nc=None, submodule=unet_block, norm=norm, dim=dim)
         # unet_block = UnetSkipConnectionBlock(filters, filters * 2, input_nc=None, submodule=unet_block, norm=norm, dim=dim)
