@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim.lr_scheduler import StepLR
 from torchvision import transforms, datasets
-from oasis import build_oasis, build_mprage
+from data import build_oasis, build_mprage
 import torchvision.transforms
 import argparse
 import numpy as np
@@ -43,6 +43,16 @@ def parse_args():
 
     return args
 
+def get_weights(set, reps=20):
+
+    w=0
+    for _ in range(reps):
+        rand_sample = set[np.random.randint(len(set))][1]
+        occ = np.array([np.sum(rand_sample == i) for i in np.unique(rand_sample)])
+
+        w += 1 - occ / np.sum(occ)
+    
+    return np.asarray(w) / reps
 
 def main(args):
 
@@ -105,7 +115,7 @@ def main(args):
     # scheduler
     scheduler = StepLR(optimizer, step_size=10, gamma=args.gamma)
 
-    train(model, train_loader, val_loader, device, criterion, optimizer, scheduler, args.epochs)
+    train(model, train_loader, val_loader, device, criterion, optimizer, scheduler, args.epochs, args.classes, get_weights(train_set))
     
     torch.save(model.state_dict(), 'data/' + args.name + '.pt')
     
