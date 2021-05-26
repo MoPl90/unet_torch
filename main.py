@@ -49,7 +49,6 @@ def get_weights(set, reps=20):
     for _ in range(reps):
         rand_sample = set[np.random.randint(len(set))][1]
         occ = np.array([np.sum(rand_sample == i) for i in np.unique(rand_sample)])
-
         w += 1 - occ / np.sum(occ)
     
     return np.asarray(w) / reps
@@ -92,7 +91,7 @@ def main(args):
         train_set    = build_mprage(root='/scratch/mplatscher/imaging_data/', train=True, train_size=0.8, transform=None)
         train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
         val_set      = build_mprage(root='/scratch/mplatscher/imaging_data/', train=False, train_size=0.8, transform=None)
-        val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
+        val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=2)
         
 
     def seed_everything(seed):

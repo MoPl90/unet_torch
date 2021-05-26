@@ -74,8 +74,8 @@ class MPRAGEDataset(VisionDataset):
 		
 		
 	def __getitem__(self, idx):
-		im = self._load_nifti(os.path.join(self.root + '/' + self.ext_im, self.fnames[idx])).astype(np.uint8)
-		lb = self._load_nifti(os.path.join(self.root + '/' + self.ext_lb, self.fnames[idx])).astype(np.float32)
+		im = self._load_nifti(os.path.join(self.root + '/' + self.ext_im, self.fnames[idx])).astype(np.float)
+		lb = self._load_nifti(os.path.join(self.root + '/' + self.ext_lb, self.fnames[idx]), label=True).astype(np.int)
 
 		  
 		seed = np.random.randint(2147483647) # make a seed with numpy generator 
@@ -103,7 +103,7 @@ class MPRAGEDataset(VisionDataset):
 		
 		if not label:
 			im = np.clip(im, clipping_percentile[0], p)
-			# im /= p
+			im /= p
 			
 		return im
 
