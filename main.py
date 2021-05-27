@@ -88,9 +88,9 @@ def main(args):
         val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
     else:
         
-        train_set    = build_mprage(root='/scratch/mplatscher/imaging_data/', train=True, train_size=0.8, transform=None)
+        train_set    = build_mprage(root='/scratch/platscher/imaging_data/', train=True, train_size=0.8, transform=None)
         train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
-        val_set      = build_mprage(root='/scratch/mplatscher/imaging_data/', train=False, train_size=0.8, transform=None)
+        val_set      = build_mprage(root='/scratch/platscher/imaging_data/', train=False, train_size=0.8, transform=None)
         val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=2)
         
 
