@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 from torch.nn.modules.batchnorm import BatchNorm2d
+from torch.nn.modules.pooling import MaxPool2d
+from collections import OrderedDict
 
 
 class Conv2DBlock(nn.Module):
@@ -167,15 +169,17 @@ class UnetSkipConnectionBlock(nn.Module):
         use_bias = 'instance' in norm.lower() 
         if input_nc is None:
             input_nc = outer_nc
-        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,
-                             stride=2, padding=1, bias=use_bias) if dim == 2 else \
-                   nn.Conv3d(input_nc, inner_nc, kernel_size=4,
-                             stride=2, padding=1, bias=use_bias)
+        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=3,
+                             stride=1, padding=1, bias=use_bias) if dim == 2 else \
+                   nn.Conv3d(input_nc, inner_nc, kernel_size=3,
+                             stride=1, padding=1, bias=use_bias)
 
-        downrelu = nn.LeakyReLU(0.2, True)
+        downrelu = nn.LeakyReLU(0.2, inplace=True)
         downnorm = norm_layer(inner_nc)
-        uprelu = nn.ReLU(True)
+        uprelu = nn.ReLU(inplace=True)
         upnorm = norm_layer(outer_nc)
+        downsample = nn.MaxPool2d(kernel_size=2) if dim == 2 else \
+                     nn.MaxPool3d(kernel_size=2) 
 
         if outermost:
             upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
@@ -184,8 +188,11 @@ class UnetSkipConnectionBlock(nn.Module):
                      nn.ConvTranspose3d(inner_nc * 2, outer_nc,
                                         kernel_size=4, stride=2,
                                         padding=1)
-            down = [downconv]
-            up = [uprelu, upconv, nn.Softmax(dim=1)]
+            # down = [downconv, downrelu, downconv, downsample]
+            # up = [uprelu, upconv, nn.Softmax(dim=1)]
+            down = [self._block(input_nc, inner_nc, 'outer_block', norm_layer, downrelu, dim), downsample]
+            up = [upconv, self._block(outer_nc, outer_nc, 'outer_block', norm_layer, nn.Softmax(dim=1), dim)]
+
             model = down + [submodule] + up
         elif innermost:
             upconv = nn.ConvTranspose2d(inner_nc, outer_nc,
@@ -194,8 +201,11 @@ class UnetSkipConnectionBlock(nn.Module):
                      nn.ConvTranspose3d(inner_nc, outer_nc,
                                         kernel_size=4, stride=2,
                                         padding=1)
-            down = [downrelu, downconv]
-            up = [uprelu, upconv, upnorm]
+            # down = [downrelu, downconv, downsample]
+            # up = [uprelu, upconv, upnorm]
+            down = [self._block(input_nc, inner_nc, 'inner_block1', norm_layer, downrelu, dim)]
+            up = [self._block(inner_nc, outer_nc, 'inner_block2', norm_layer, downrelu, dim)]
+
             model = down + up
         else:
             upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
@@ -204,8 +214,11 @@ class UnetSkipConnectionBlock(nn.Module):
                      nn.ConvTranspose3d(inner_nc * 2, outer_nc,
                                         kernel_size=4, stride=2,
                                         padding=1, bias=use_bias)
-            down = [downrelu, downconv, downnorm]
-            up = [uprelu, upconv, upnorm]
+            # down = [downrelu, downconv, downnorm,  downsample]
+            # up = [uprelu, upconv, upnorm]
+
+            down = [self._block(input_nc, inner_nc, 'inner_block', norm_layer, downrelu, dim), downsample]
+            up = [upconv, self._block(outer_nc, outer_nc, 'outer_block', norm_layer, downrelu, dim)]
 
             if use_dropout:
                 model = down + [submodule] + up + [nn.Dropout(0.5)]
@@ -215,7 +228,74 @@ class UnetSkipConnectionBlock(nn.Module):
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
+
         if self.outermost:
             return self.model(x)
         else:   # add skip connections
             return torch.cat([x, self.model(x)], 1)
+
+
+    @staticmethod
+    def _block(in_channels, features, name, norm_layer, act_layer, dim):
+        if dim == 2:
+            return nn.Sequential(
+                OrderedDict(
+                    [
+                        (
+                            name + "conv1",
+                            nn.Conv2d(
+                                in_channels=in_channels,
+                                out_channels=features,
+                                kernel_size=3,
+                                padding=1,
+                                bias=False,
+                            ),
+                        ),
+                        (name + "norm1", norm_layer(num_features=features)),
+                        (name + "relu1", act_layer),
+                        (
+                            name + "conv2",
+                            nn.Conv2d(
+                                in_channels=features,
+                                out_channels=features,
+                                kernel_size=3,
+                                padding=1,
+                                bias=False,
+                            ),
+                        ),
+                        (name + "norm2", norm_layer(num_features=features)),
+                        (name + "relu2", act_layer),
+                    ]
+                )
+            )
+        else:
+            return nn.Sequential(
+                OrderedDict(
+                    [
+                        (
+                            name + "conv1",
+                            nn.Conv3d(
+                                in_channels=in_channels,
+                                out_channels=features,
+                                kernel_size=3,
+                                padding=1,
+                                bias=False,
+                            ),
+                        ),
+                        (name + "norm1", norm_layer(num_features=features)),
+                        (name + "relu1", act_layer),
+                        (
+                            name + "conv2",
+                            nn.Conv3d(
+                                in_channels=features,
+                                out_channels=features,
+                                kernel_size=3,
+                                padding=1,
+                                bias=False,
+                            ),
+                        ),
+                        (name + "norm2", norm_layer(num_features=features)),
+                        (name + "relu2", act_layer),
+                    ]
+                )
+            )
