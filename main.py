@@ -39,6 +39,7 @@ def parse_args():
     parser.add_argument('-g', '--gpu', help='GPU ID', type=str, default='0')
     parser.add_argument('-s', '--seed', help='random seed', type=int, default=42)
     parser.add_argument('-a', '--aug', help='toggle data augmentation', type=bool, default=True)
+    parser.add_argument('--patience', help='Early stopping patience', type=int, default=100)
 
     args = parser.parse_args()
 
@@ -123,7 +124,7 @@ def main(args):
     # scheduler
     scheduler = StepLR(optimizer, step_size=10, gamma=args.gamma)
 
-    train(model, train_loader, val_loader, device, criterion, optimizer, scheduler, args.epochs, args.classes, get_weights(train_set))
+    train(model, train_loader, val_loader, device, criterion, optimizer, scheduler, args.epochs, args.classes, get_weights(train_set), args.patience, args.name)
     
     torch.save(model.state_dict(), 'data/' + args.name + '.pt')
     

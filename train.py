@@ -1,10 +1,14 @@
+from numpy.core.fromnumeric import mean
 import torch
 from tqdm import tqdm
+import os
+import numpy as np
 from metrics import dice
 
 
-def train(model, train_loader, val_loader, device, criterion, optimizer, scheduler, epochs, classes, weights):
+def train(model, train_loader, val_loader, device, criterion, optimizer, scheduler, epochs, classes, weights, patience=10, name=''):
 
+    val = []
     for epoch in range(0, epochs):
         epoch_loss     = 0
         epoch_accuracy = 0
@@ -54,7 +58,25 @@ def train(model, train_loader, val_loader, device, criterion, optimizer, schedul
 
                 if len(label.shape) > 2:
                     epoch_val_dice += dice(val_output, label, train=False, classes=classes) / len(val_loader)
-                    
+            
+            val_dice_mean = torch.mean(criterion.weight * epoch_val_dice)
+            
+
+            #Check checkpoints and early stopping criterion:
+            if len(val) > 0:
+                if val_dice_mean > val[-1]:
+                    torch.save(model.state_dict(), 'data/' + name + '_' + str(epoch + 1) + '.pt')
+                    try:
+                        os.system("rm data/" + name + '_' + str(epoch) + '.pt')
+                    except FileExistsError:
+                        pass
+
+                if len(val) > patience and torch.all(val_dice_mean <= val[-patience:]):
+                    break
+
+        val.append(val_dice_mean)
+        print(val)
+
         scheduler.step()
 
 
