@@ -82,11 +82,7 @@ class MPRAGEDataset(VisionDataset):
 		random.seed(seed) # apply this seed to img tranfsorms
 		torch.manual_seed(seed) # needed for torchvision 0.7
 		if self.transform is not None:
-			im = self.transform(im)
-			#reset the seed	
-			random.seed(seed)
-			torch.manual_seed(seed)
-			lb = self.transform(lb)
+			im,lb = self.transform((im, lb))
 		
 		sample = (im, lb)#{'image': im, 'label': lb}
 		return sample

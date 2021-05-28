@@ -5,6 +5,7 @@ from torch.optim.lr_scheduler import StepLR
 from torchvision import transforms, datasets
 from data import build_oasis, build_mprage
 import torchvision.transforms
+from transform import Resize, RandomZoom, RandomHorizontalFlip
 import argparse
 import numpy as np
 from train import train
@@ -37,7 +38,7 @@ def parse_args():
     parser.add_argument('-ga', '--gamma', help='learning rate decay rate', type=float, default=0.7)
     parser.add_argument('-g', '--gpu', help='GPU ID', type=str, default='0')
     parser.add_argument('-s', '--seed', help='random seed', type=int, default=42)
-
+    parser.add_argument('-a', '--aug', help='toggle data augmentation', type=bool, default=True)
 
     args = parser.parse_args()
 
@@ -87,10 +88,18 @@ def main(args):
         val_set      = build_oasis(root='/scratch/backUps/jzopes/data/oasis_project/Transformer/', train=False, transform=transform_val)
         val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
     else:
+        transform_train =  transforms.Compose([
+                                        Resize(args.image_size),
+                                        RandomZoom(.15),
+                                        RandomHorizontalFlip(.5)
+                                    ]) if args.aug else \
+                           Resize(args.image_size)
+
+        transform_val = Resize(args.image_size)
         
-        train_set    = build_mprage(root='/scratch/platscher/imaging_data/', train=True, train_size=0.8, transform=None)
+        train_set    = build_mprage(root='/scratch/mplatscher/imaging_data/', train=True, train_size=0.8, transform=transform_train)
         train_loader = torch.utils.data.DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=2)
-        val_set      = build_mprage(root='/scratch/platscher/imaging_data/', train=False, train_size=0.8, transform=None)
+        val_set      = build_mprage(root='/scratch/mplatscher/imaging_data/', train=False, train_size=0.8, transform=transform_val)
         val_loader   = torch.utils.data.DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=2)
         
 
